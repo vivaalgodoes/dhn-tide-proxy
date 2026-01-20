@@ -186,7 +186,7 @@ function parseDayPairsFromText(text) {
     const pairs = [];
 
     while ((pm = pairRe.exec(rest)) !== null) {
-      pairs.push({ hhmm: pm[1], height: p[2] });
+      pairs.push({ hhmm: pm[1], height: Number(pm[2]) });
     }
 
     if (pairs.length) {

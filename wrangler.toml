@@ -1,3 +1,3 @@
-name = "dhn-ilheus-proxy"
+name = "dhn-tide-proxy"
 main = "src/index.js"
 compatibility_date = "2026-01-20"

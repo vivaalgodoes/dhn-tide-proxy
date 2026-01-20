@@ -1,3 +1,3 @@
-name = "dhn-tide-proxy"
+name = "dhn-mare-proxy"
 main = "src/index.js"
 compatibility_date = "2026-01-20"

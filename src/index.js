@@ -8,28 +8,45 @@ export default {
 
     // Retorna semana de maré (JSON) já pronto para o Wix
     if (url.pathname === "/dhn/ilheus/week") {
-      const start = url.searchParams.get("start"); // YYYY-MM-DD (opcional)
-      const startDate = start ? start : getBahiaDateKey(new Date());
+      try {
+        const start = url.searchParams.get("start"); // YYYY-MM-DD (opcional)
+        const startDate = start ? start : getBahiaDateKey(new Date());
 
-      // 1) Descobre PDF atual no índice
-      const pdfUrl = await discoverIlheusPdfUrl();
+        // 1) Descobre PDF atual no índice
+        const pdfUrl = await discoverIlheusPdfUrl();
 
-      // 2) Baixa PDF
-      const pdfBytes = await fetchPdfBytes(pdfUrl);
+        // 2) Baixa PDF
+        const pdfBytes = await fetchPdfBytes(pdfUrl);
 
-      // 3) Extrai texto do PDF (via pdf.js em Worker? -> não é viável direto)
-      // ✅ Estratégia robusta: usar um serviço de conversão *dentro do Worker* via endpoint público
-      // Mas o ideal é: usar PDF text extractor em JS puro não é simples no Worker.
-      // Então, para Cloudflare, a forma mais estável é:
-      // - usar um endpoint de conversão (ex.: pdf2text) OU
-      // - usar um modelo de PDF que já contém texto legível e extrair por regex dos bytes (muitas vezes funciona)
+        // 3) Extrai texto do PDF (via pdf.js em Worker? -> não é viável direto)
+        // ✅ Estratégia robusta: usar um serviço de conversão *dentro do Worker* via endpoint público
+        // Mas o ideal é: usar PDF text extractor em JS puro não é simples no Worker.
+        // Então, para Cloudflare, a forma mais estável é:
+        // - usar um endpoint de conversão (ex.: pdf2text) OU
+        // - usar um modelo de PDF que já contém texto legível e extrair por regex dos bytes (muitas vezes funciona)
 
-      const rawText = bytesToLatin1String(pdfBytes);
-      const normalized = normalizeSpaces(rawText);
+        const rawText = bytesToLatin1String(pdfBytes);
+        const normalized = normalizeSpaces(rawText);
 
-      const payload = buildWeekFromDhnText(normalized, startDate, pdfUrl);
+        const payload = buildWeekFromDhnText(normalized, startDate, pdfUrl);
 
-      return json(payload);
+        return json(payload);
+      } catch (err) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: String(err?.message || err),
+            stack: String(err?.stack || ""),
+          }),
+          {
+            status: 500,
+            headers: {
+              "content-type": "application/json; charset=utf-8",
+              "access-control-allow-origin": "*",
+            },
+          }
+        );
+      }
     }
 
     return new Response("Not Found", { status: 404 });

@@ -1,4 +1,4 @@
-const BUILD_ID = "build-2026-01-20-01";
+const BUILD_ID = "build-2026-01-20-02";
 
 export default {
   async fetch(request, env, ctx) {
@@ -13,9 +13,7 @@ export default {
         const start = url.searchParams.get("start"); // YYYY-MM-DD (opcional)
         const startDate = start ? start : getBahiaDateKey(new Date());
 
-        // ✅ Usando URL direta do PDF (evita 403 no índice)
         const pdfUrl = ILHEUS_PDF_URL;
-
         const pdfBytes = await fetchPdfBytes(pdfUrl);
 
         const rawText = bytesToLatin1String(pdfBytes);
@@ -30,6 +28,7 @@ export default {
             ok: false,
             error: String(err?.message || err),
             stack: String(err?.stack || ""),
+            buildId: BUILD_ID
           }),
           {
             status: 500,
@@ -46,8 +45,9 @@ export default {
   }
 };
 
+// ✅ PDF hospedado no GitHub (raw) — evita 403 do site da Marinha
 const ILHEUS_PDF_URL =
-  "https://www.marinha.mil.br/chm/sites/www.marinha.mil.br.chm/files/dados_de_mare/32%20-%20PORTO%20DE%20ILH%C3%89US%20-%20MALHADO%20-%20106%20-%20108.pdf";
+  "https://raw.githubusercontent.com/vivaalgodoes/dhn-tide-proxy/main/Data_Ilheus.pdf";
 
 function json(obj) {
   return new Response(JSON.stringify(obj), {
@@ -114,10 +114,11 @@ async function fetchPdfBytes(pdfUrl) {
   const resp = await fetch(pdfUrl, {
     headers: {
       "user-agent": "Mozilla/5.0",
-      "accept": "application/pdf,*/*"
+      "accept": "application/pdf,*/*",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8"
     }
   });
-  if (!resp.ok) throw new Error(`PDF DHN falhou: ${resp.status}`);
+  if (!resp.ok) throw new Error(`PDF (GitHub) falhou: ${resp.status}`);
   return await resp.arrayBuffer();
 }
 
@@ -130,6 +131,8 @@ const MONTH_NAMES = [
 function sliceMonthBlock(fullText, monthNumber) {
   const name = MONTH_NAMES[monthNumber];
   if (!name) return null;
+
+  const next = monthNumber === 12 ? null : MONTH_NAMES[monthNumber + 1];
 
   const hay = normalizeTextForSearch(fullText);
   const needle = normalizeTextForSearch(name);

@@ -1,9 +1,11 @@
+const BUILD_ID = "build-2026-01-20-01";
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (url.pathname === "/health") {
-      return new Response("ok", { status: 200 });
+      return new Response(`ok ${BUILD_ID}`, { status: 200 });
     }
 
     if (url.pathname === "/dhn/ilheus/week") {
@@ -128,8 +130,6 @@ const MONTH_NAMES = [
 function sliceMonthBlock(fullText, monthNumber) {
   const name = MONTH_NAMES[monthNumber];
   if (!name) return null;
-
-  const next = monthNumber === 12 ? null : MONTH_NAMES[monthNumber + 1];
 
   const hay = normalizeTextForSearch(fullText);
   const needle = normalizeTextForSearch(name);

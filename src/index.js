@@ -6,24 +6,15 @@ export default {
       return new Response("ok", { status: 200 });
     }
 
-    // Retorna semana de maré (JSON) já pronto para o Wix
     if (url.pathname === "/dhn/ilheus/week") {
       try {
         const start = url.searchParams.get("start"); // YYYY-MM-DD (opcional)
         const startDate = start ? start : getBahiaDateKey(new Date());
 
-        // 1) Descobre PDF atual no índice
-        const pdfUrl = await discoverIlheusPdfUrl();
+        // ✅ Usando URL direta do PDF (evita 403 no índice)
+        const pdfUrl = ILHEUS_PDF_URL;
 
-        // 2) Baixa PDF
         const pdfBytes = await fetchPdfBytes(pdfUrl);
-
-        // 3) Extrai texto do PDF (via pdf.js em Worker? -> não é viável direto)
-        // ✅ Estratégia robusta: usar um serviço de conversão *dentro do Worker* via endpoint público
-        // Mas o ideal é: usar PDF text extractor em JS puro não é simples no Worker.
-        // Então, para Cloudflare, a forma mais estável é:
-        // - usar um endpoint de conversão (ex.: pdf2text) OU
-        // - usar um modelo de PDF que já contém texto legível e extrair por regex dos bytes (muitas vezes funciona)
 
         const rawText = bytesToLatin1String(pdfBytes);
         const normalized = normalizeSpaces(rawText);
@@ -52,6 +43,9 @@ export default {
     return new Response("Not Found", { status: 404 });
   }
 };
+
+const ILHEUS_PDF_URL =
+  "https://www.marinha.mil.br/chm/sites/www.marinha.mil.br.chm/files/dados_de_mare/32%20-%20PORTO%20DE%20ILH%C3%89US%20-%20MALHADO%20-%20106%20-%20108.pdf";
 
 function json(obj) {
   return new Response(JSON.stringify(obj), {
@@ -112,38 +106,6 @@ function dateKeyToUtcIsoFromLocalHHMM(dateKey, hhmm) {
   const localAsUtcMs = Date.UTC(y, m - 1, d, hh, mm, 0, 0);
   const utcMs = localAsUtcMs - (LOCAL_TZ_OFFSET_MINUTES * 60 * 1000);
   return new Date(utcMs).toISOString();
-}
-
-const INDEX_URL = "https://www.marinha.mil.br/chm/tabuas-de-mare-6";
-const TARGET_LABEL = "PORTO DE ILHÉUS";
-
-async function discoverIlheusPdfUrl() {
-  const resp = await fetch(INDEX_URL, {
-    headers: {
-      "user-agent": "Mozilla/5.0",
-      "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8"
-    }
-  });
-
-  if (!resp.ok) throw new Error(`Índice DHN falhou: ${resp.status}`);
-
-  const html = await resp.text();
-  const links = [];
-  const re = /href\s*=\s*"([^"]+\.pdf[^"]*)"/gi;
-  let m = null;
-  while ((m = re.exec(html)) !== null) links.push(m[1]);
-
-  const pdfUrls = links
-    .map((href) => {
-      if (href.startsWith("http")) return href;
-      if (href.startsWith("/")) return `https://www.marinha.mil.br${href}`;
-      return `https://www.marinha.mil.br/${href}`;
-    });
-
-  const target = pdfUrls.find((u) => normalizeTextForSearch(u).includes(normalizeTextForSearch(TARGET_LABEL)));
-  if (!target) throw new Error("PDF de Ilhéus não encontrado no índice DHN.");
-  return target;
 }
 
 async function fetchPdfBytes(pdfUrl) {

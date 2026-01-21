@@ -73,12 +73,12 @@ function addDaysToDateKey(dateKey, days) {
 }
 
 function buildWeekFromJsonData(jsonData, startDateKey, jsonUrl) {
-  // ✅ NOVO: assume que jsonData é um array de objetos com { dateKey, extremes }
+  // ✅ CORRIGIDO: jsonData é um objeto com { location, year, timezone, days }
   // Filtra apenas os dias da semana solicitada
   const weekKeys = [];
   for (let i = 0; i < 7; i++) weekKeys.push(addDaysToDateKey(startDateKey, i));
 
-  const days = jsonData.filter(d => weekKeys.includes(d.dateKey));
+  const days = jsonData.days.filter(d => weekKeys.includes(d.dateKey));
 
   // Monta flatExtremes
   const flatExtremes = days.flatMap(d => d.extremes || []);
